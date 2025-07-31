@@ -437,11 +437,8 @@ copies of the Software...
 ## 👨‍💻 Auteur
 
 **Votre Nom**
-- 🌐 Website: [votre-site.com](https://votre-site.com)
-- 📧 Email: [votre.email@example.com](mailto:votre.email@example.com)
-- 🐙 GitHub: [@VOTRENOM](https://github.com/VOTRENOM)
-- 💼 LinkedIn: [votre-profil](https://linkedin.com/in/votre-profil)
-- 🐦 Twitter: [@votre_handle](https://twitter.com/votre_handle)
+- 📧 Email: [locsenmam@gmail.com](mailto:votre.email@example.com)
+- 🐙 GitHub: [@mozzdev](https://github.com/VOTRENOM)
 
 ---
 
@@ -462,23 +459,6 @@ copies of the Software...
 ![GitHub Issues](https://img.shields.io/github/issues/VOTRENOM/ats-decoder)
 ![GitHub Pull Requests](https://img.shields.io/github/issues-pr/VOTRENOM/ats-decoder)
 ![Last Commit](https://img.shields.io/github/last-commit/VOTRENOM/ats-decoder)
-
----
-
-## 📞 Support
-
-Besoin d'aide ? Plusieurs options s'offrent à vous :
-
-### 🆘 Support communautaire (Gratuit)
-- 🐛 [Issues GitHub](https://github.com/VOTRENOM/ats-decoder/issues) - Bugs et questions
-- 💬 [Discussions GitHub](https://github.com/VOTRENOM/ats-decoder/discussions) - Questions générales
-- 📧 Email : [support@votre-domaine.com](mailto:support@votre-domaine.com)
-
-### 💼 Support commercial
-Pour un support dédié ou des fonctionnalités personnalisées :
-- 📧 Contact : [commercial@votre-domaine.com](mailto:commercial@votre-domaine.com)
-- 📞 Téléphone : +33 X XX XX XX XX
-- 💻 Consultation : Disponible sur demande
 
 ---
 
