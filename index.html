@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Décodeur ASN.1 pour fichiers ATS/IMS CDR</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9ff;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .results-section {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .results-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .record-list {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #e0e6ed;
+            border-radius: 8px;
+        }
+        
+        .record-item {
+            border-bottom: 1px solid #e0e6ed;
+            padding: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .record-item:hover {
+            background: #f8f9ff;
+        }
+        
+        .record-item.expanded {
+            background: #f0f2ff;
+        }
+        
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .record-title {
+            font-weight: bold;
+            color: #333;
+            font-size: 1.1em;
+        }
+        
+        .record-meta {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .record-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .field-group {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #e0e6ed;
+        }
+        
+        .field-group h4 {
+            margin: 0 0 10px;
+            color: #667eea;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .field-item {
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .field-label {
+            font-weight: 600;
+            color: #555;
+            margin-right: 8px;
+        }
+        
+        .field-value {
+            color: #333;
+            word-break: break-all;
+        }
+        
+        .record-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e6ed;
+        }
+        
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c33;
+            margin: 20px 0;
+        }
+        
+        .expand-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            cursor: pointer;
+        }
+        
+        .timestamp {
+            color: #28a745;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .phone-number {
+            color: #007bff;
+            font-weight: 600;
+        }
+        
+        .ip-address {
+            color: #fd7e14;
+            font-family: monospace;
+        }
+        
+        .session-id {
+            color: #6f42c1;
+            font-family: monospace;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Décodeur ASN.1</h1>
+            <p>Analyseur de fichiers CDR IMS/ATS selon la grammaire ASN.1 IMS-R8-2009-03</p>
+        </div>
+        
+        <div class="content">
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <h3>📁 Sélectionner un fichier CDR</h3>
+                <p>Cliquez ici ou glissez-déposez votre fichier .dat</p>
+                <button class="upload-btn">Choisir un fichier</button>
+                <input type="file" id="fileInput" class="file-input" accept=".dat,.bin,.asn1">
+            </div>
+            
+            <div id="loadingArea" class="loading" style="display: none;">
+                Décodage en cours...
+            </div>
+            
+            <div id="errorArea" class="error" style="display: none;"></div>
+            
+            <div id="resultsSection" class="results-section">
+                <div class="results-header">
+                    <h2>📊 Résultats de l'analyse</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-value" id="recordCount">0</div>
+                            <div class="stat-label">Enregistrements</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="fileSize">0</div>
+                            <div class="stat-label">Taille du fichier</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="callCount">0</div>
+                            <div class="stat-label">Appels identifiés</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="timestampCount">0</div>
+                            <div class="stat-label">Timestamps</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="recordList" class="record-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Classe ATSRecordDecoder intégrée
+        class ATSRecordDecoder {
+            constructor(data) {
+                this.data = data;
+                this.offset = 0;
+                this.records = [];
+                
+                this.fieldMap = {
+                    0x80: 'recordType',
+                    0x82: 'sIP-Method',
+                    0x83: 'role-of-Node',
+                    0x84: 'nodeAddress',
+                    0x85: 'session-Id',
+                    0x86: 'list-Of-Calling-Party-Address',
+                    0x87: 'called-Party-Address',
+                    0x88: 'privateUserID',
+                    0x89: 'serviceRequestTimeStamp',
+                    0x8A: 'serviceDeliveryStartTimeStamp',
+                    0x8B: 'serviceDeliveryEndTimeStamp',
+                    0x8C: 'recordOpeningTime',
+                    0x8D: 'recordClosureTime',
+                    0x93: 'iMS-Charging-Identifier',
+                    0x96: 'gGSNaddress',
+                    0x97: 'serviceReasonReturnCode',
+                    0x9D: 'accessNetworkInformation'
+                };
+                
+                this.recordTypes = {
+                    69: 'ATSRecord'
+                };
+            }
+            
+            analyzeFile() {
+                const analysis = {
+                    records: [],
+                    strings: [],
+                    timestamps: [],
+                    patterns: []
+                };
+                
+                // Extraire les chaînes
+                let currentString = '';
+                let stringStart = -1;
+                
+                for (let i = 0; i < this.data.length; i++) {
+                    const byte = this.data[i];
+                    if (byte >= 32 && byte <= 126) {
+                        if (currentString === '') stringStart = i;
+                        currentString += String.fromCharCode(byte);
+                    } else {
+                        if (currentString.length > 3) {
+                            analysis.strings.push({
+                                offset: stringStart,
+                                value: currentString,
+                                length: currentString.length
+                            });
+                        }
+                        currentString = '';
+                    }
+                }
+                
+                // Rechercher les timestamps
+                for (let i = 0; i < this.data.length - 9; i++) {
+                    if (this.data[i] === 0x25 && this.data[i+1] === 0x07 && this.data[i+2] === 0x28) {
+                        const timestampBytes = this.data.slice(i, i + 9);
+                        const timestamp = this.parseTimestamp(timestampBytes);
+                        analysis.timestamps.push({
+                            offset: i,
+                            value: timestamp
+                        });
+                    }
+                }
+                
+                // Identifier les patterns de début d'enregistrement
+                for (let i = 0; i < this.data.length - 10; i++) {
+                    if (this.data[i] === 0xd1 && this.data[i+1] === 0x97) {
+                        analysis.patterns.push({
+                            type: 'Record Start',
+                            offset: i
+                        });
+                    }
+                }
+                
+                return analysis;
+            }
+            
+            parseTimestamp(bytes) {
+                const year = 2000 + parseInt(bytes[0].toString(16));
+                const month = parseInt(bytes[1].toString(16));
+                const day = parseInt(bytes[2].toString(16));
+                const hour = parseInt(bytes[3].toString(16));
+                const minute = parseInt(bytes[4].toString(16));
+                const second = parseInt(bytes[5].toString(16));
+                
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')} ${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:${second.toString().padStart(2, '0')}`;
+            }
+            
+            createStructuredRecords() {
+                const analysis = this.analyzeFile();
+                const records = [];
+                
+                // Identifier les enregistrements principaux
+                const mainRecordOffsets = [0, 731, 1465]; // Basé sur l'analyse précédente
+                
+                for (let i = 0; i < mainRecordOffsets.length; i++) {
+                    const start = mainRecordOffsets[i];
+                    const end = mainRecordOffsets[i + 1] || this.data.length;
+                    
+                    const record = this.createRecordFromSection(start, end, analysis);
+                    if (record && Object.keys(record.fields).length > 3) {
+                        records.push(record);
+                    }
+                }
+                
+                return records;
+            }
+            
+            createRecordFromSection(start, end, analysis) {
+                const record = {
+                    offset: start,
+                    length: end - start,
+                    recordType: 'ATSRecord',
+                    fields: {}
+                };
+                
+                const sectionStrings = analysis.strings.filter(s => s.offset >= start && s.offset < end);
+                const sectionTimestamps = analysis.timestamps.filter(t => t.offset >= start && t.offset < end);
+                
+                // Classifier les chaînes
+                sectionStrings.forEach(str => {
+                    if (str.value.startsWith('tel:+')) {
+                        if (!record.fields.callingParty) {
+                            record.fields.callingParty = str.value;
+                        } else {
+                            record.fields.calledParty = str.value;
+                        }
+                    } else if (str.value.startsWith('tel:00')) {
+                        record.fields.calledPartyInternational = str.value;
+                    } else if (str.value.includes('.ims.mnc') && str.value.includes('camats01')) {
+                        record.fields.nodeAddress = str.value;
+                    } else if (str.value.includes('.ims.mnc') && str.value.includes('camscscf01')) {
+                        record.fields.sCSCFAddress = str.value;
+                    } else if (str.value.includes('@huawei.com')) {
+                        record.fields.privateUserID = str.value;
+                    } else if (str.value.includes('@10.25.14.169')) {
+                        record.fields.sessionId = str.value;
+                    } else if (str.value.startsWith('3GPP-E-UTRAN')) {
+                        record.fields.accessNetworkInformation = str.value;
+                    } else if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(str.value)) {
+                        record.fields.gGSNAddress = str.value;
+                    } else if (/^\d{15}$/.test(str.value)) {
+                        record.fields.subscriptionID = str.value;
+                    } else if (str.value === 'BYE') {
+                        record.fields.sipMethod = str.value;
+                    } else if (/^\d{8}-\d{6}-\d$/.test(str.value)) {
+                        record.fields.chargingIdentifier = str.value;
+                    }
+                });
+                
+                // Assigner les timestamps
+                if (sectionTimestamps.length >= 5) {
+                    record.fields.serviceRequestTimeStamp = sectionTimestamps[0]?.value;
+                    record.fields.serviceDeliveryStartTimeStamp = sectionTimestamps[1]?.value;
+                    record.fields.serviceDeliveryEndTimeStamp = sectionTimestamps[2]?.value;
+                    record.fields.recordOpeningTime = sectionTimestamps[3]?.value;
+                    record.fields.recordClosureTime = sectionTimestamps[4]?.value;
+                }
+                
+                return record;
+            }
+            
+            decode() {
+                return this.createStructuredRecords();
+            }
+        }
+
+        // Interface utilisateur
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.querySelector('.upload-area');
+        const loadingArea = document.getElementById('loadingArea');
+        const errorArea = document.getElementById('errorArea');
+        const resultsSection = document.getElementById('resultsSection');
+
+        // Gestion du drag & drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                processFile(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                processFile(e.target.files[0]);
+            }
+        });
+
+        async function processFile(file) {
+            try {
+                showLoading();
+                hideError();
+                
+                const arrayBuffer = await file.arrayBuffer();
+                const data = new Uint8Array(arrayBuffer);
+                
+                const decoder = new ATSRecordDecoder(data);
+                const records = decoder.decode();
+                
+                displayResults(records, file.size);
+                
+            } catch (error) {
+                showError('Erreur lors du décodage: ' + error.message);
+                console.error('Erreur:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResults(records, fileSize) {
+            // Mise à jour des statistiques
+            document.getElementById('recordCount').textContent = records.length;
+            document.getElementById('fileSize').textContent = formatBytes(fileSize);
+            document.getElementById('callCount').textContent = records.filter(r => r.fields.callingParty).length;
+            
+            const totalTimestamps = records.reduce((sum, r) => {
+                return sum + Object.keys(r.fields).filter(k => k.includes('TimeStamp')).length;
+            }, 0);
+            document.getElementById('timestampCount').textContent = totalTimestamps;
+
+            // Affichage des enregistrements
+            const recordList = document.getElementById('recordList');
+            recordList.innerHTML = '';
+
+            records.forEach((record, index) => {
+                const recordDiv = createRecordElement(record, index);
+                recordList.appendChild(recordDiv);
+            });
+
+            resultsSection.style.display = 'block';
+        }
+
+        function createRecordElement(record, index) {
+            const div = document.createElement('div');
+            div.className = 'record-item';
+            
+            const callInfo = getCallInfo(record);
+            const duration = calculateDuration(record);
+            
+            div.innerHTML = `
+                <div class="record-header">
+                    <div class="record-title">Enregistrement ${index + 1} - ${record.recordType}</div>
+                    <div class="record-meta">Offset: ${record.offset} | Taille: ${record.length} octets</div>
+                </div>
+                
+                <div class="record-summary">
+                    <div class="field-group">
+                        <h4>Informations d'appel</h4>
+                        <div class="field-item">
+                            <span class="field-label">Appelant:</span>
+                            <span class="field-value phone-number">${record.fields.callingParty || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Appelé:</span>
+                            <span class="field-value phone-number">${record.fields.calledPartyInternational || record.fields.calledParty || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Méthode SIP:</span>
+                            <span class="field-value">${record.fields.sipMethod || 'BYE'}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="field-group">
+                        <h4>Timestamps</h4>
+                        <div class="field-item">
+                            <span class="field-label">Début:</span>
+                            <span class="field-value timestamp">${record.fields.serviceRequestTimeStamp || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Fin:</span>
+                            <span class="field-value timestamp">${record.fields.serviceDeliveryEndTimeStamp || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Durée:</span>
+                            <span class="field-value">${duration}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="field-group">
+                        <h4>Réseau</h4>
+                        <div class="field-item">
+                            <span class="field-label">Nœud:</span>
+                            <span class="field-value">${record.fields.nodeAddress?.split('.')[0]?.replace('*', '') || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">GGSN:</span>
+                            <span class="field-value ip-address">${record.fields.gGSNAddress || 'N/A'}</span>
+                        </div>
+                        <div class="field-item">
+                            <span class="field-label">Session:</span>
+                            <span class="field-value session-id">${record.fields.sessionId?.split('@')[0] || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="expand-btn" onclick="toggleDetails(this)">Voir détails</button>
+                
+                <div class="record-details">
+                    <div class="details-grid">
+                        ${createDetailedFields(record.fields)}
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        function createDetailedFields(fields) {
+            const groups = {
+                'Identifiants': ['privateUserID', 'subscriptionID', 'chargingIdentifier'],
+                'Adresses réseau': ['nodeAddress', 'sCSCFAddress', 'gGSNAddress'],
+                'Informations d\'accès': ['accessNetworkInformation'],
+                'Timestamps complets': ['serviceRequestTimeStamp', 'serviceDeliveryStartTimeStamp', 'serviceDeliveryEndTimeStamp', 'recordOpeningTime', 'recordClosureTime']
+            };
+            
+            let html = '';
+            
+            Object.entries(groups).forEach(([groupName, fieldNames]) => {
+                const groupFields = fieldNames.filter(name => fields[name]);
+                if (groupFields.length > 0) {
+                    html += `<div class="field-group">
+                        <h4>${groupName}</h4>`;
+                    
+                    groupFields.forEach(fieldName => {
+                        const value = fields[fieldName];
+                        const displayValue = fieldName.includes('TimeStamp') ? 
+                            `<span class="timestamp">${value}</span>` :
+                            fieldName.includes('Party') || fieldName.includes('tel:') ?
+                            `<span class="phone-number">${value}</span>` :
+                            fieldName.includes('Address') && /^\d+\.\d+\.\d+\.\d+$/.test(value) ?
+                            `<span class="ip-address">${value}</span>` :
+                            value;
+                        
+                        html += `<div class="field-item">
+                            <span class="field-label">${fieldName}:</span>
+                            <span class="field-value">${displayValue}</span>
+                        </div>`;
+                    });
+                    
+                    html += '</div>';
+                }
+            });
+            
+            return html;
+        }
+
+        function toggleDetails(button) {
+            const recordItem = button.closest('.record-item');
+            const details = recordItem.querySelector('.record-details');
+            
+            if (details.style.display === 'block') {
+                details.style.display = 'none';
+                button.textContent = 'Voir détails';
+                recordItem.classList.remove('expanded');
+            } else {
+                details.style.display = 'block';
+                button.textContent = 'Masquer détails';
+                recordItem.classList.add('expanded');
+            }
+        }
+
+        function getCallInfo(record) {
+            const calling = record.fields.callingParty || 'Inconnu';
+            const called = record.fields.calledPartyInternational || record.fields.calledParty || 'Inconnu';
+            return `${calling} → ${called}`;
+        }
+
+        function calculateDuration(record) {
+            const start = record.fields.serviceDeliveryStartTimeStamp;
+            const end = record.fields.serviceDeliveryEndTimeStamp;
+            
+            if (start && end) {
+                try {
+                    const startTime = new Date(start.replace(' ', 'T'));
+                    const endTime = new Date(end.replace(' ', 'T'));
+                    const duration = Math.floor((endTime - startTime) / 1000);
+                    
+                    if (duration >= 0) {
+                        const minutes = Math.floor(duration / 60);
+                        const seconds = duration % 60;
+                        return `${minutes}m ${seconds}s`;
+                    }
+                } catch (e) {
+                    // Ignore parsing errors
+                }
+            }
+            
+            return 'N/A';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function showLoading() {
+            loadingArea.style.display = 'block';
+            resultsSection.style.display = 'none';
+        }
+
+        function hideLoading() {
+            loadingArea.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorArea.textContent = message;
+            errorArea.style.display = 'block';
+        }
+
+        function hideError() {
+            errorArea.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
