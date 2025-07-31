@@ -5,7 +5,7 @@
 ## 🚀 Accès direct
 
 ### 🌐 Version en ligne
-👉 **[Utilisez le décodeur maintenant](https://VOTRENOM.github.io/ats-decoder)**
+👉 **[Utilisez le décodeur maintenant](https://mozzdev.github.io/ats-decoder)**
 
 *Aucune installation requise - Fonctionne directement dans votre navigateur*
 
